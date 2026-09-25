@@ -1,31 +1,32 @@
 return {
   {
-    "lewis6991/gitsigns.nvim",
+    "nvim-mini/mini.diff",
+    version = false,
     event = { "BufReadPre", "BufNewFile" },
-    opts = {
-      on_attach = function(bufnr)
-        local gs = package.loaded.gitsigns
+    config = function()
+      local minidiff = require("mini.diff")
+      minidiff.setup({
+        view = { style = "sign", signs = { add = "┃", change = "┃", delete = "▁" } },
+        -- mini's maps are global and error outside enabled buffers; keep only reset and the textobject.
+        mappings = { apply = "", goto_first = "", goto_prev = "", goto_next = "", goto_last = "", textobject = "ih" },
+      })
 
-        local function map(mode, l, r, desc)
-          vim.keymap.set(mode, l, r, { buffer = bufnr, desc = desc })
+      -- Act only in enabled buffers, as gitsigns' buffer-local maps did.
+      local function in_diff_buf(fn, arg)
+        return function()
+          if minidiff.get_buf_data(0) then
+            fn(arg)
+          end
         end
+      end
 
-        -- Navigation
-        map("n", "]h", gs.next_hunk, "Next Hunk")
-        map("n", "[h", gs.prev_hunk, "Prev Hunk")
-
-        -- Actions
-        map("n", "<leader>gr", gs.reset_hunk, "Reset hunk")
-        map("v", "<leader>gr", function()
-          gs.reset_hunk({ vim.fn.line("."), vim.fn.line("v") })
-        end, "Reset hunk")
-
-        map("n", "<leader>gP", gs.preview_hunk, "Preview hunk")
-
-        -- Text object
-        map({ "o", "x" }, "ih", ":<C-U>Gitsigns select_hunk<CR>", "Gitsigns select hunk")
-      end,
-    },
+      vim.keymap.set({ "n", "x" }, "]h", in_diff_buf(minidiff.goto_hunk, "next"), { desc = "Next hunk" })
+      vim.keymap.set({ "n", "x" }, "[h", in_diff_buf(minidiff.goto_hunk, "prev"), { desc = "Prev hunk" })
+      -- gH is mini's reset operator; ih widens a cursor-line reset to the whole hunk.
+      vim.keymap.set("n", "<leader>gr", "gHih", { remap = true, desc = "Reset hunk" })
+      vim.keymap.set("x", "<leader>gr", "gH", { remap = true, desc = "Reset selected lines" })
+      vim.keymap.set("n", "<leader>gP", in_diff_buf(minidiff.toggle_overlay, 0), { desc = "Toggle diff overlay" })
+    end,
   },
   {
     "FabijanZulj/blame.nvim",

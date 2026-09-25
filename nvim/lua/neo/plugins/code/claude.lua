@@ -1,16 +1,140 @@
 local cwd = vim.fn.getcwd()
 local HERDR_AGENT_NAME = "claude-" .. vim.fn.fnamemodify(cwd, ":t") .. "-" .. vim.fn.getpid()
-local claude_pane_id = nil
+local HERDR_SOCKET_PATH = vim.env.HERDR_SOCKET_PATH
+local HERDR_WORKSPACE_ID = vim.env.HERDR_WORKSPACE_ID
+local NVIM_PANE_ID = vim.env.HERDR_PANE_ID
 
-local function focus_claude_pane()
-  vim.fn.jobstart({ "herdr", "agent", "focus", HERDR_AGENT_NAME }, { detach = true })
+-- A GUI nvim started from a herdr shell inherits HERDR_* without living in that pane.
+local function in_herdr_pane()
+  local ui = vim.api.nvim_list_uis()[1]
+  local client = ui and vim.api.nvim_get_chan_info(ui.chan).client
+  return HERDR_SOCKET_PATH and client and client.name == "nvim-tui"
 end
 
-local function focus_neovim_pane()
-  if not claude_pane_id then
-    return
+-- The CLI can't focus a pane by ID, so use the socket: one JSON line per connection. nil means no answer.
+local function herdr_call(method, params, on_response)
+  on_response = vim.schedule_wrap(on_response or function() end)
+  if not in_herdr_pane() then
+    return on_response(nil)
   end
-  vim.fn.jobstart({ "herdr", "pane", "focus", "--pane", claude_pane_id, "--direction", "left" }, { detach = true })
+  local pipe = assert(vim.uv.new_pipe())
+  local timeout = assert(vim.uv.new_timer())
+  local buffered = ""
+  local function finish(response)
+    if pipe:is_closing() then
+      return
+    end
+    pipe:close()
+    timeout:close()
+    on_response(response)
+  end
+  timeout:start(1000, 0, function()
+    finish(nil)
+  end)
+  pipe:connect(HERDR_SOCKET_PATH, function(connect_err)
+    if connect_err then
+      return finish(nil)
+    end
+    pipe:write(vim.json.encode({ id = method, method = method, params = params }) .. "\n")
+    pipe:read_start(function(read_err, chunk)
+      buffered = buffered .. (chunk or "")
+      local line = buffered:match("^([^\n]*)\n")
+      if line or read_err or not chunk then
+        local ok, response = pcall(vim.json.decode, line or "")
+        finish(ok and response or nil)
+      end
+    end)
+  end)
+end
+
+local function workspace_claudes(on_claudes)
+  herdr_call("agent.list", vim.empty_dict(), function(response)
+    local claudes = {}
+    for _, agent in ipairs(response and response.result and response.result.agents or {}) do
+      if agent.agent == "claude" and agent.workspace_id == HERDR_WORKSPACE_ID then
+        table.insert(claudes, agent)
+      end
+    end
+    on_claudes(claudes)
+  end)
+end
+
+-- Focused Claude when the last diff opened: the best guess for a /ide-attached Claude, which has no name.
+local diff_claude_pane_id = nil
+
+-- Prefer the Claude this nvim started, then the one that opened the last diff, then the most recently active.
+local function pick_claude(claudes)
+  local from_diff, latest = nil, nil
+  for _, agent in ipairs(claudes) do
+    if agent.name == HERDR_AGENT_NAME then
+      return agent
+    end
+    if agent.pane_id == diff_claude_pane_id then
+      from_diff = agent
+    end
+    if not latest or (agent.state_change_seq or 0) > (latest.state_change_seq or 0) then
+      latest = agent
+    end
+  end
+  return from_diff or latest
+end
+
+local function claude_pane(on_pane)
+  workspace_claudes(function(claudes)
+    local agent = pick_claude(claudes)
+    on_pane(agent and agent.pane_id)
+  end)
+end
+
+-- Runs as a diff opens, so also record which Claude sent it.
+local function neovim_pane(on_pane)
+  workspace_claudes(function(claudes)
+    for _, agent in ipairs(claudes) do
+      if agent.focused then
+        diff_claude_pane_id = agent.pane_id
+      end
+    end
+    on_pane(NVIM_PANE_ID)
+  end)
+end
+
+-- A replaced diff fires DiffClosed then DiffOpened in one tick; only the latest request may move focus.
+local focus_generation = 0
+local function focus(resolve_pane)
+  focus_generation = focus_generation + 1
+  local generation = focus_generation
+  resolve_pane(function(pane_id)
+    if pane_id and generation == focus_generation then
+      herdr_call("pane.focus", { pane_id = pane_id })
+    end
+  end)
+end
+
+-- Show the proposed buffer alone with mini.diff's overlay. Closing the original window doesn't reject
+-- the diff (claudecode only rejects once the proposed buffer has no window), and cleanup closes the tab.
+local function show_diff_overlay(diff)
+  local proposed = vim.api.nvim_win_get_buf(diff.diff_window)
+  local original = {}
+  if not diff.is_new_file then
+    original = vim.api.nvim_buf_get_lines(vim.api.nvim_win_get_buf(diff.target_window), 0, -1, false)
+  end
+
+  -- git can't attach to this non-file buffer, and set_ref_text needs it enabled.
+  local minidiff = require("mini.diff")
+  vim.b[proposed].minidiff_config = { source = minidiff.gen_source.none() }
+  minidiff.disable(proposed)
+  minidiff.enable(proposed)
+  minidiff.set_ref_text(proposed, original)
+  if not minidiff.get_buf_data(proposed).overlay then
+    minidiff.toggle_overlay(proposed)
+  end
+
+  -- Anything above can throw; only drop the side-by-side view once the overlay is up.
+  vim.api.nvim_win_close(diff.target_window, true)
+  vim.api.nvim_set_current_win(diff.diff_window)
+  vim.cmd("diffoff")
+  vim.wo[diff.diff_window].winbar = "%= <F1> Accept | <F2> Reject | ]h/[h Next/Prev hunk %="
+  vim.wo[diff.diff_window].winhighlight = "WinBar:DiagnosticHint,WinBarNC:DiagnosticHint"
 end
 
 return {
@@ -46,8 +170,6 @@ return {
         vim.notify("herdr: failed to split a pane for Claude Code", vim.log.levels.ERROR)
         return { "true" }
       end
-      claude_pane_id = pane_id
-
       local start_cmd = { "herdr", "agent", "start", HERDR_AGENT_NAME, "--kind", "claude", "--pane", pane_id }
       if #extra_args > 0 then
         table.insert(start_cmd, "--")
@@ -64,23 +186,28 @@ return {
         },
       },
       diff_opts = {
-        layout = "unified",
+        -- "unified" interleaves old lines into the proposed buffer; show_diff_overlay needs it pure.
+        layout = "vertical",
+        open_in_new_tab = true,
       },
     })
 
     vim.api.nvim_create_autocmd("User", {
       pattern = { "ClaudeCodeSendComplete", "ClaudeCodeDiffClosed" },
-      callback = focus_claude_pane,
+      callback = function()
+        focus(claude_pane)
+      end,
     })
 
+    -- claudecode swallows errors from this autocmd, so report them; the side-by-side diff stays usable.
     vim.api.nvim_create_autocmd("User", {
       pattern = "ClaudeCodeDiffOpened",
       callback = function(ev)
-        local diff_window = ev.data and ev.data.diff_window
-        if diff_window and vim.api.nvim_win_is_valid(diff_window) then
-          vim.api.nvim_set_current_win(diff_window)
+        local ok, err = pcall(show_diff_overlay, ev.data)
+        if not ok then
+          vim.notify("Claude diff overlay failed: " .. tostring(err), vim.log.levels.ERROR)
         end
-        focus_neovim_pane()
+        focus(neovim_pane)
       end,
     })
 
@@ -107,11 +234,11 @@ return {
     end, {})
   end,
   keys = {
-    { "<leader>cp", "<cmd>ClaudeCodeAdd %<cr>",          desc = "Claude: add buffer to context" },
-    { "<leader>cb", "<cmd>ClaudeCodeAddAllBuffers<cr>",  desc = "Claude: add all open buffers" },
+    { "<leader>cp", "<cmd>ClaudeCodeAdd %<cr>", desc = "Claude: add buffer to context" },
+    { "<leader>cb", "<cmd>ClaudeCodeAddAllBuffers<cr>", desc = "Claude: add all open buffers" },
     { "<leader>cq", "<cmd>ClaudeCodeAddAllQuickfix<cr>", desc = "Claude: add all quickfix items" },
     { "<leader>cv", "<cmd>ClaudeCodeSend<cr>", mode = "v", desc = "Claude: send selection" },
     { "<F1>", "<cmd>ClaudeCodeDiffAccept<cr>", desc = "Claude: accept diff" },
-    { "<F2>", "<cmd>ClaudeCodeDiffDeny<cr>",   desc = "Claude: reject diff" },
+    { "<F2>", "<cmd>ClaudeCodeDiffDeny<cr>", desc = "Claude: reject diff" },
   },
 }
