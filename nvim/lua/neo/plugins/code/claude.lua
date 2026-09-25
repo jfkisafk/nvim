@@ -1,4 +1,5 @@
-local HERDR_AGENT_NAME = "claude-" .. vim.fn.fnamemodify(vim.fn.getcwd(), ":t") .. "-" .. vim.fn.getpid()
+local cwd = vim.fn.getcwd()
+local HERDR_AGENT_NAME = "claude-" .. vim.fn.fnamemodify(cwd, ":t") .. "-" .. vim.fn.getpid()
 local claude_pane_id = nil
 
 local function focus_claude_pane()
@@ -30,7 +31,7 @@ return {
         "--direction",
         "right",
         "--cwd",
-        vim.fn.getcwd(),
+        cwd,
         "--focus",
       }
       for key, value in pairs(env) do
@@ -38,9 +39,10 @@ return {
         table.insert(split_cmd, key .. "=" .. value)
       end
 
-      local ok, decoded = pcall(vim.json.decode, vim.fn.system(split_cmd))
-      local pane_id = ok and decoded and decoded.result and decoded.result.pane and decoded.result.pane.pane_id
-      if not pane_id then
+      local ok, pane_id = pcall(function()
+        return vim.json.decode(vim.fn.system(split_cmd)).result.pane.pane_id
+      end)
+      if not (ok and pane_id) then
         vim.notify("herdr: failed to split a pane for Claude Code", vim.log.levels.ERROR)
         return { "true" }
       end
@@ -67,7 +69,7 @@ return {
     })
 
     vim.api.nvim_create_autocmd("User", {
-      pattern = "ClaudeCodeSendComplete",
+      pattern = { "ClaudeCodeSendComplete", "ClaudeCodeDiffClosed" },
       callback = focus_claude_pane,
     })
 
@@ -80,11 +82,6 @@ return {
         end
         focus_neovim_pane()
       end,
-    })
-
-    vim.api.nvim_create_autocmd("User", {
-      pattern = "ClaudeCodeDiffClosed",
-      callback = focus_claude_pane,
     })
 
     vim.api.nvim_create_user_command("ClaudeCodeAddAllBuffers", function()
@@ -101,7 +98,7 @@ return {
     vim.api.nvim_create_user_command("ClaudeCodeAddAllQuickfix", function()
       local seen = {}
       for _, item in ipairs(vim.fn.getqflist()) do
-        local path = vim.api.nvim_buf_get_name(item.bufnr)
+        local path = item.bufnr > 0 and vim.api.nvim_buf_get_name(item.bufnr) or ""
         if path ~= "" and not seen[path] then
           seen[path] = true
           claudecode.send_at_mention(path, nil, nil, "add_all_quickfix")
@@ -113,12 +110,7 @@ return {
     { "<leader>cp", "<cmd>ClaudeCodeAdd %<cr>",          desc = "Claude: add buffer to context" },
     { "<leader>cb", "<cmd>ClaudeCodeAddAllBuffers<cr>",  desc = "Claude: add all open buffers" },
     { "<leader>cq", "<cmd>ClaudeCodeAddAllQuickfix<cr>", desc = "Claude: add all quickfix items" },
-    {
-      "<leader>cv",
-      "<cmd>ClaudeCodeSend<cr>",
-      mode = "v",
-      desc = "Claude: send selection",
-    },
+    { "<leader>cv", "<cmd>ClaudeCodeSend<cr>", mode = "v", desc = "Claude: send selection" },
     { "<F1>", "<cmd>ClaudeCodeDiffAccept<cr>", desc = "Claude: accept diff" },
     { "<F2>", "<cmd>ClaudeCodeDiffDeny<cr>",   desc = "Claude: reject diff" },
   },
