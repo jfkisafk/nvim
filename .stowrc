@@ -6,3 +6,5 @@
 --ignore=.git
 --ignore=readme.md
 --ignore=license.md
+--ignore=AGENTS.md
+--ignore=.claude
