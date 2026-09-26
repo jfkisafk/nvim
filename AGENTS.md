@@ -1,12 +1,10 @@
 # AGENTS.md
 
-Personal Neovim config, GNU `stow` → `~/.config` (`stow .` to apply, `stow -D .` to undo; `.stowrc` holds the target and ignore list). Everything else (Karabiner, herdr, Posting, etc.) lives in the home-manager repo (`jfkisafk/nix`).
+Personal Neovim config; the repo root is `~/.config/nvim` (linked there by home-manager or a plain symlink). Everything else in `~/.config` lives in the home-manager repo (`jfkisafk/nix`).
 
-- `nvim/` is deliberately outside Nix so plugins/LSPs update without rebuilding the home-manager generation.
+- Deliberately outside Nix so plugins/LSPs update without rebuilding the home-manager generation.
 - The companion home-manager repo is separate — don't reconcile it here.
 - No build/lint/test suite. CI runs gitleaks only.
-
-## `nvim/`
 
 `init.lua` loads `neo.core` (options, then keymaps) → `neo.lazy` (bootstraps lazy.nvim, imports `neo.plugins{,.code,.ui,.explorer}`) → `neo.lsp` (LspAttach keymaps, diagnostic signs).
 

@@ -144,8 +144,3 @@ Icon
 Network Trash Folder
 Temporary Items
 .apdisk
-
-# Karabiner
-!karabiner.json.bak
-karabiner/assets
-karabiner/automatic_backups

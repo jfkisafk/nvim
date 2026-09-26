@@ -1,37 +1,25 @@
-# $HOME/.config dotfiles
+# nvim
 
-> [!IMPORTANT]
-> This package uses [stow](https://www.gnu.org/software/stow/) to manage the Neovim configuration in ~/.config.
-
-## Why?
-
-Neovim configuration that is managed stand-alone and not in the other [Nix configuration](https://github.com/jfkisafk/nix).
+My Neovim configuration, managed stand-alone and not in the [Nix configuration](https://github.com/jfkisafk/nix).
 Even though _nixvim_ is present, adding to Nix meant every small update required reloading
 the entire Nix/home-manager configuration.
 
 This way we can lazy load the plugins and LSPs quickly while maintaining the same Neovim
 development environment.
 
-Everything else under ~/.config (Karabiner, Herdr, Posting, …) is managed by the Nix configuration.
-
-## Requirements
-
-Make sure you have `stow` installed.
-
-```shell
-brew install stow
-```
-
 ## Installation
 
-Checkout the repository in your preferred dotfiles directory.
+Clone the repository straight into the Neovim config directory.
 
 ```shell
-gh repo clone jfkisafk/dotfiles ~/.config/dotfiles
+gh repo clone jfkisafk/nvim ~/.config/nvim
 ```
 
-Just call stow from the repository root.
+Or clone it anywhere and let home-manager link it, so it stays editable without a rebuild:
 
-```shell
-stow .
+```nix
+xdg.configFile."nvim".source =
+  config.lib.file.mkOutOfStoreSymlink "/Volumes/nitro/nvim";
 ```
+
+Plugins and LSPs install on the first launch of `nvim`.
