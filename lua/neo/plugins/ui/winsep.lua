@@ -5,7 +5,7 @@ return {
     local p = require("rose-pine.palette")
     require("colorful-winsep").setup({
       colors = { p.pine },
-      animate = "progressive",
+      animate = { enabled = "progressive" },
     })
   end,
 }

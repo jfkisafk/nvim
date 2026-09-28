@@ -12,6 +12,10 @@ keymap.set("i", "jk", "<ESC>", { desc = "Exit insert mode with jk" })
 -- clear search highlights
 keymap.set("n", "<leader>H", ":nohl<CR>", { desc = "Clear search highlights" })
 
+-- comments (built-in gc, extended by ts-comments)
+keymap.set("n", "<leader>/", "gcc", { remap = true, desc = "Toggle comment" })
+keymap.set("x", "<leader>/", "gc", { remap = true, desc = "Toggle comment" })
+
 -- window management
 keymap.set("n", "<leader>sv", "<C-w>v", { desc = "Split window vertically" })     -- split window vertically
 keymap.set("n", "<leader>sh", "<C-w>s", { desc = "Split window horizontally" })   -- split window horizontally

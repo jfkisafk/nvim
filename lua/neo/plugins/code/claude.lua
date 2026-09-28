@@ -1,5 +1,4 @@
-local cwd = vim.fn.getcwd()
-local HERDR_AGENT_NAME = "claude-" .. vim.fn.fnamemodify(cwd, ":t") .. "-" .. vim.fn.getpid()
+local HERDR_AGENT_NAME = "claude-" .. vim.fn.fnamemodify(vim.fn.getcwd(), ":t") .. "-" .. vim.fn.getpid()
 local HERDR_SOCKET_PATH = vim.env.HERDR_SOCKET_PATH
 local HERDR_WORKSPACE_ID = vim.env.HERDR_WORKSPACE_ID
 local NVIM_PANE_ID = vim.env.HERDR_PANE_ID
@@ -140,6 +139,31 @@ end
 return {
   "coder/claudecode.nvim",
   event = "VeryLazy",
+  specs = {
+    "folke/snacks.nvim",
+    opts = function(_, opts)
+      return vim.tbl_deep_extend("force", opts or {}, {
+        picker = {
+          actions = {
+            claude_send = function(picker)
+              for _, item in ipairs(picker:selected({ fallback = true })) do
+                if item.file then
+                  require("claudecode").send_at_mention(Snacks.picker.util.path(item), nil, nil, "claude_send")
+                end
+              end
+            end,
+          },
+          win = {
+            input = {
+              keys = {
+                ["<a-c>"] = { "claude_send", mode = { "n", "i" } },
+              },
+            },
+          },
+        },
+      })
+    end,
+  },
   config = function()
     local claudecode = require("claudecode")
 
@@ -155,7 +179,7 @@ return {
         "--direction",
         "right",
         "--cwd",
-        cwd,
+        vim.fn.getcwd(),
         "--focus",
       }
       for key, value in pairs(env) do
@@ -234,10 +258,24 @@ return {
     end, {})
   end,
   keys = {
-    { "<leader>cp", "<cmd>ClaudeCodeAdd %<cr>", desc = "Claude: add buffer to context" },
-    { "<leader>cb", "<cmd>ClaudeCodeAddAllBuffers<cr>", desc = "Claude: add all open buffers" },
-    { "<leader>cq", "<cmd>ClaudeCodeAddAllQuickfix<cr>", desc = "Claude: add all quickfix items" },
-    { "<leader>cv", "<cmd>ClaudeCodeSend<cr>", mode = "v", desc = "Claude: send selection" },
+    {
+      "<leader>ac",
+      function()
+        workspace_claudes(function(claudes)
+          local agent = pick_claude(claudes)
+          if agent then
+            herdr_call("pane.focus", { pane_id = agent.pane_id })
+          else
+            vim.cmd("ClaudeCode")
+          end
+        end)
+      end,
+      desc = "Claude: focus or start",
+    },
+    { "<leader>ap", "<cmd>ClaudeCodeAdd %<cr>", desc = "Claude: add buffer to context" },
+    { "<leader>ab", "<cmd>ClaudeCodeAddAllBuffers<cr>", desc = "Claude: add all open buffers" },
+    { "<leader>aq", "<cmd>ClaudeCodeAddAllQuickfix<cr>", desc = "Claude: add all quickfix items" },
+    { "<leader>av", "<cmd>ClaudeCodeSend<cr>", mode = "v", desc = "Claude: send selection" },
     { "<F1>", "<cmd>ClaudeCodeDiffAccept<cr>", desc = "Claude: accept diff" },
     { "<F2>", "<cmd>ClaudeCodeDiffDeny<cr>", desc = "Claude: reject diff" },
   },

@@ -1,8 +1,14 @@
+local vault = vim.fn.expand("~/iso/notes")
+-- ~/iso is a symlink to /Volumes/iso; match buffers opened through either path.
+local vault_md = vim.fn.join({ vault .. "/*.md", vim.fn.resolve(vault) .. "/*.md" }, ",")
+
 return {
   "obsidian-nvim/obsidian.nvim",
   version = "*",
-  lazy = true,
-  ft = "markdown",
+  event = {
+    "BufReadPre " .. vault_md,
+    "BufNewFile " .. vault_md,
+  },
   dependencies = {
     "nvim-lua/plenary.nvim",
   },
@@ -10,7 +16,7 @@ return {
     workspaces = {
       {
         name = "iso",
-        path = "~/iso/notes",
+        path = vault,
       },
     },
     picker = {
@@ -25,7 +31,7 @@ return {
     },
     -- Timestamp-based IDs with slugified title
     note_id_func = function(title)
-      local suffix = title and title:gsub(" ", "-"):gsub("[^A-Za-z0-9-]", ""):lower()
+      local suffix = title and title ~= "" and title:gsub(" ", "-"):gsub("[^A-Za-z0-9-]", ""):lower()
           or (function()
             local s = ""
             for _ = 1, 6 do
@@ -60,13 +66,8 @@ return {
     { "<leader>od", "<cmd>Obsidian today<cr>",        desc = "Today's Daily Note" },
     { "<leader>oy", "<cmd>Obsidian yesterday<cr>",    desc = "Yesterday's Daily Note" },
     { "<leader>oY", "<cmd>Obsidian tomorrow<cr>",     desc = "Tomorrow's Daily Note" },
-    {
-      "<leader>ol",
-      function()
-        return require("obsidian").util.cursor_on_markdown_link() and "<cmd>Obsidian follow_link<cr>" or "<leader>ol"
-      end,
-      expr = true,
-      desc = "Follow Link",
-    },
+    -- `:` rather than <cmd> so the visual range is passed through.
+    { "<leader>oe", ":Obsidian extract_note<cr>",     mode = "v", desc = "Extract to Note" },
+    { "<leader>ol", ":Obsidian link_new<cr>",         mode = "v", desc = "Link to New Note" },
   },
 }

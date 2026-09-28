@@ -17,6 +17,9 @@ require("lazy").setup({
   { import = "neo.plugins.ui" },
   { import = "neo.plugins.explorer" },
 }, {
+  install = {
+    colorscheme = { "rose-pine" },
+  },
   checker = {
     enabled = true,
     notify = false,

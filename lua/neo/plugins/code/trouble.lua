@@ -4,6 +4,7 @@ return {
     dependencies = { "nvim-tree/nvim-web-devicons" },
     opts = {
       focus = true,
+      auto_close = true,
       modes = {
         preview_float = {
           mode = "diagnostics",
@@ -46,6 +47,11 @@ return {
         "<leader>xx",
         "<cmd>Trouble diagnostics toggle<cr>",
         desc = "Diagnostics (Trouble)",
+      },
+      {
+        "<leader>xX",
+        "<cmd>Trouble preview_float toggle<cr>",
+        desc = "Diagnostics with Float Preview (Trouble)",
       },
       {
         "<leader>cs",

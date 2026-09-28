@@ -1,8 +1,23 @@
 return {
   "folke/todo-comments.nvim",
+  event = "VeryLazy",
   dependencies = { "nvim-lua/plenary.nvim" },
   opts = {},
   keys = {
+    {
+      "]t",
+      function()
+        require("todo-comments").jump_next()
+      end,
+      desc = "Next todo comment",
+    },
+    {
+      "[t",
+      function()
+        require("todo-comments").jump_prev()
+      end,
+      desc = "Previous todo comment",
+    },
     {
       "<leader>st",
       function()
@@ -10,8 +25,6 @@ return {
       end,
       desc = "Todo/Fix/Fixme",
     },
-    { "<leader>lt", "<cmd>TodoLocList<CR>",                                    desc = "Todo/Fix/Fixme" },
-    { "<leader>qt", "<cmd>TodoQuickFix<CR>",                                   desc = "Todo/Fix/Fixme" },
     { "<leader>xt", "<cmd>Trouble todo filter = {tag = {TODO,FIX,FIXME}}<CR>", desc = "Todo/Fix/Fixme" },
   },
 }

@@ -51,96 +51,56 @@ return {
       end
     end
 
-    local node_fts = {
-      javascript = true,
-      typescript = true,
-      javascriptreact = true,
-      typescriptreact = true,
-      svelte = true,
-      astro = true,
-      vue = true,
-    }
-
-    local function is_obsidian_note()
-      return vim.bo.filetype == "markdown" and vim.b.obsidian_buffer == true
-    end
-
-    local function obsidian_status()
-      if not is_obsidian_note() then
-        return ""
-      end
-      local ws = _G.Obsidian and _G.Obsidian.workspace
-      return ws and (" " .. ws.name) or ""
-    end
-
-    local function roslyn_status()
-      if vim.bo.filetype ~= "cs" then
-        return ""
-      end
-      local clients = vim.lsp.get_clients({ name = "roslyn" })
-      if #clients == 0 then
-        return ""
-      end
-
-      local bufnr = vim.api.nvim_get_current_buf()
-      local file_dir = vim.fn.expand("#" .. bufnr .. ":p:h")
-      local csproj = vim.fs.find(function(name)
-        return name:match("%.csproj$")
-      end, { upward = true, path = file_dir })[1]
-
-      if csproj then
-        for _, line in ipairs(vim.fn.readfile(csproj)) do
-          local match = line:match("<TargetFrameworks?>(.-)</TargetFrameworks?>")
-          if match then
-            return " " .. match
-          end
-        end
-      end
-
-      local solution = vim.g.roslyn_nvim_selected_solution
-      return solution and (" " .. vim.fn.fnamemodify(solution, ":t:r")) or " Roslyn"
-    end
-
-    local function node_status()
-      if not node_fts[vim.bo.filetype] then
-        return ""
-      end
-      if vim.b.node_version then
-        return "󰎙 " .. vim.b.node_version
-      end
-      local version = vim.fn.system("node --version 2>/dev/null"):gsub("%s+", ""):gsub("^v", "")
-      if version ~= "" then
-        vim.b.node_version = version
-        return "󰎙 " .. version
-      end
-      return "󰎙 Node"
-    end
-
     mason_check()
     mason_registry:on("package:install:success", vim.schedule_wrap(mason_check))
 
+    local bubble = { left = "", right = "" }
+
     require("lualine").setup({
-      options = { theme = theme },
+      options = {
+        theme = theme,
+        globalstatus = true,
+        section_separators = { left = "", right = "" },
+        component_separators = { left = "", right = "" },
+      },
       sections = {
+        lualine_a = {
+          {
+            "mode",
+            fmt = function(str)
+              return str:sub(1, 1)
+            end,
+            separator = bubble,
+          },
+          { "branch", icon = "", separator = bubble },
+        },
+        lualine_b = {
+          {
+            "diff",
+            symbols = { added = " ", modified = " ", removed = " " },
+            source = function()
+              local summary = vim.b.minidiff_summary
+              return summary and { added = summary.add, modified = summary.change, removed = summary.delete }
+            end,
+          },
+        },
+        lualine_c = {
+          {
+            function()
+              return symbols.get():gsub("%b()", "")
+            end,
+            cond = symbols.has,
+          },
+        },
         lualine_x = {
           {
-            obsidian_status,
-            cond = is_obsidian_note,
-            color = { fg = p.gold },
-          },
-          {
-            roslyn_status,
-            cond = function()
-              return vim.bo.filetype == "cs"
+            function()
+              return "󰑋 " .. vim.fn.reg_recording()
             end,
-            color = { fg = p.foam },
-          },
-          {
-            node_status,
             cond = function()
-              return node_fts[vim.bo.filetype]
+              return vim.fn.reg_recording() ~= ""
             end,
-            color = { fg = p.foam },
+            color = { fg = p.love, gui = "italic,bold" },
           },
           {
             lazy_status.updates,
@@ -156,15 +116,21 @@ return {
             end,
             color = { fg = p.iris },
           },
+        },
+        lualine_y = {
+          { "diagnostics", color = { gui = "bold" } },
+        },
+        lualine_z = {
+          { "lsp_status", icon = " ", color = { gui = "italic" }, separator = bubble },
           {
             function()
-              return symbols.get():gsub("%b()", "")
+              return "󰚩 "
             end,
-            cond = symbols.has,
+            cond = function()
+              return package.loaded.claudecode ~= nil and require("claudecode").is_claude_connected()
+            end,
+            separator = bubble,
           },
-          { "encoding" },
-          { "fileformat" },
-          { "filetype" },
         },
       },
     })
