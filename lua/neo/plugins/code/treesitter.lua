@@ -85,6 +85,7 @@ return {
         "make",
         "markdown",
         "markdown_inline",
+        "nix",
         "passwd",
         "pem",
         "printf",

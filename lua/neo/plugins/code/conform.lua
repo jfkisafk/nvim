@@ -52,6 +52,7 @@ return {
       kotlin = { "ktlint" },
       lua = { "stylua" },
       markdown = { "prettier", "markdownlint" },
+      nix = { "nixfmt" },
 
       javascript = web(true),
       javascriptreact = web(true),
