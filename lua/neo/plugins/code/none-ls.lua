@@ -15,7 +15,11 @@ return {
         null_ls.builtins.diagnostics.staticcheck,
         null_ls.builtins.diagnostics.stylelint,
         null_ls.builtins.diagnostics.tfsec,
-        null_ls.builtins.diagnostics.yamllint,
+        null_ls.builtins.diagnostics.yamllint.with({
+          to_stdin = false,
+          to_temp_file = true,
+          args = { "--format", "parsable", "$FILENAME" },
+        }),
       },
     })
   end,

@@ -10,15 +10,16 @@ return {
     notification = {
       icon = " ",
     },
+    editingBehavior = { autoCaptureGroups = true },
   },
   keys = {
     {
-      "<leader>fs",
+      "<leader>sr",
       function()
         require("rip-substitute").sub()
       end,
       mode = { "n", "x" },
-      desc = "Rip Substitute",
+      desc = "Search & replace",
     },
   },
 }

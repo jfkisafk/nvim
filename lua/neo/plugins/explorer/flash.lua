@@ -1,7 +1,9 @@
 return {
   "folke/flash.nvim",
   event = "VeryLazy",
-  opts = {},
+  opts = {
+    highlight = { backdrop = false },
+  },
   specs = {
     {
       "folke/snacks.nvim",

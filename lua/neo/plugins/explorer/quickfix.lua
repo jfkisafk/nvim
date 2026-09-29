@@ -2,15 +2,8 @@ return {
   "stevearc/quicker.nvim",
   event = "FileType qf",
   opts = {
-    borders = {
-      vert = " ┃ ",
-      strong_header = "━",
-      strong_cross = "╋",
-      strong_end = "┫",
-      soft_header = "╌",
-      soft_cross = "╂",
-      soft_end = "┨",
-    },
+    borders = { vert = " ┃ " },
+    follow = { enabled = true },
     keys = {
       {
         ">",

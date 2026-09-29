@@ -25,12 +25,11 @@ return {
       -- gH is mini's reset operator; ih widens a cursor-line reset to the whole hunk.
       vim.keymap.set("n", "<leader>gr", "gHih", { remap = true, desc = "Reset hunk" })
       vim.keymap.set("x", "<leader>gr", "gH", { remap = true, desc = "Reset selected lines" })
-      vim.keymap.set("n", "<leader>gP", in_diff_buf(minidiff.toggle_overlay, 0), { desc = "Toggle diff overlay" })
+      vim.keymap.set("n", "<leader>go", in_diff_buf(minidiff.toggle_overlay, 0), { desc = "Toggle diff overlay" })
     end,
   },
   {
     "FabijanZulj/blame.nvim",
-    event = "VeryLazy",
     keys = {
       { "<leader>gb", "<cmd>BlameToggle window<cr>", desc = "Git Blame (Window)" },
     },
@@ -50,5 +49,12 @@ return {
         colors = { p.love, p.gold, p.rose, p.pine, p.foam, p.iris },
       })
     end,
+  },
+  {
+    "akinsho/git-conflict.nvim",
+    version = "*",
+    -- Conflict detection hooks BufRead, so VeryLazy would miss the file nvim was started with.
+    event = "BufReadPre",
+    opts = {},
   },
 }

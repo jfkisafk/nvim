@@ -105,6 +105,11 @@ return {
         cwd_bonus = true, -- give bonus for matching files in the cwd
         frecency = true, -- frecency bonus
       },
+      previewers = {
+        diff = { style = "terminal", cmd = { "delta" } },
+        -- core.pager is diffnav, an interactive TUI that can't render in a preview.
+        git = { args = { "-c", "core.pager=delta" } },
+      },
       sources = {
         gh_pr = {
           confirm = "gh_diff",
