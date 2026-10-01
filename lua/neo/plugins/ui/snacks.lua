@@ -111,6 +111,15 @@ return {
         git = { args = { "-c", "core.pager=delta" } },
       },
       sources = {
+        explorer = {
+          auto_close = true,
+          jump = { close = true },
+          transform = function(item)
+            if item.severity and item.severity > vim.diagnostic.severity.WARN then
+              item.severity = nil
+            end
+          end,
+        },
         gh_pr = {
           confirm = "gh_diff",
         },

@@ -118,7 +118,7 @@ return {
           },
         },
         lualine_y = {
-          { "diagnostics", color = { gui = "bold" } },
+          { "diagnostics", sections = { "error", "warn" }, color = { gui = "bold" } },
         },
         lualine_z = {
           { "lsp_status", icon = " ", color = { gui = "italic" }, separator = bubble },

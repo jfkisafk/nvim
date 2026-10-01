@@ -66,8 +66,12 @@ return {
     opts = {
       preset = "ghost",
       options = {
-        multilines = { enabled = true },
+        multilines = {
+          enabled = true,
+          severity = { vim.diagnostic.severity.ERROR, vim.diagnostic.severity.WARN },
+        },
         show_source = true,
+        severity = { vim.diagnostic.severity.ERROR, vim.diagnostic.severity.WARN },
       },
     },
   },
