@@ -121,7 +121,24 @@ return {
           end,
         },
         gh_pr = {
-          confirm = "gh_diff",
+          actions = {
+            tuicr = {
+              "close",
+              -- close's pending stopinsert would knock the terminal out of terminal mode.
+              function(_, item)
+                vim.schedule(function()
+                  Snacks.terminal({ "tuicr", "pr", "--no-update-check", item.url })
+                end)
+              end,
+            },
+          },
+          win = {
+            input = {
+              keys = {
+                ["<c-x>"] = { "tuicr", mode = { "n", "i" } },
+              },
+            },
+          },
         },
         grep = {
           hidden = true,
