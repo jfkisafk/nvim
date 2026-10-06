@@ -86,6 +86,7 @@ return {
         "markdown",
         "markdown_inline",
         "nix",
+        "nu",
         "passwd",
         "pem",
         "printf",

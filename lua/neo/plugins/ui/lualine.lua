@@ -55,6 +55,7 @@ return {
     mason_registry:on("package:install:success", vim.schedule_wrap(mason_check))
 
     local bubble = { left = "", right = "" }
+    local mode_icons = { NORMAL = "\u{e62b}", INSERT = "\u{f040}", VISUAL = "\u{f0485}", ["V-LINE"] = "\u{f0571}" }
 
     require("lualine").setup({
       options = {
@@ -68,7 +69,7 @@ return {
           {
             "mode",
             fmt = function(str)
-              return str:sub(1, 1)
+              return mode_icons[str] or str:sub(1, 1)
             end,
             separator = bubble,
           },
