@@ -46,6 +46,12 @@ return {
         NvimDapViewControlStepBack = { fg = "iris" },
         NvimDapViewControlTerminate = { fg = "love" },
         NvimDapViewControlDisconnect = { fg = "love" },
+        GitConflictCurrent = { bg = "pine", blend = 20 },
+        GitConflictCurrentLabel = { bg = "pine", blend = 40, bold = true },
+        GitConflictIncoming = { bg = "foam", blend = 20 },
+        GitConflictIncomingLabel = { bg = "foam", blend = 40, bold = true },
+        GitConflictAncestor = { bg = "iris", blend = 15 },
+        GitConflictAncestorLabel = { bg = "iris", blend = 30, bold = true },
       },
     })
 
